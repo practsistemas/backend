@@ -1,96 +1,64 @@
-import Reunion from "../models/reuniones.js";
-import { format } from 'date-fns';
+// controllers/reunionesController.js
 
-const httpReuniones = {
-    getReuniones: async (req, res) => {
-        try {
-            const reuniones = await Reunion.find();
-            res.json({ reuniones });
-        } catch (error) {
-            res.status(500).json({ error: "Error al obtener las reuniones" });
-        }
-    },
-    getReunionesActivos: async (req, res) => {
-        const reuniones = await Reunion.find({ estado: 1 });
-        res.json({ reuniones });
-    },
-    getReunionesInactivos: async (req, res) => {
-        const reuniones = await Reunion.find({ estado: 0 });
-        res.json({ reuniones });
-    },
-    postReuniones: async (req, res) => {
-        try {
-            const { idusuario, idsala, fecha, horaInicio, horaFin, estado } = req.body;
+import { google } from 'googleapis';
+import { OAuth2Client } from 'google-auth-library';
 
-            // Convertir las fechas utilizando solo el formato de `date-fns`
-            const fechaInicio = new Date(`${fecha}T${horaInicio}`);
-            const fechaFin = new Date(`${fecha}T${horaFin}`);
+// Instanciamos OAuth2Client
+const oauth2Client = new OAuth2Client(
+    process.env.GOOGLE_CLIENT_ID, 
+    process.env.GOOGLE_CLIENT_SECRET, 
+    process.env.GOOGLE_REDIRECT_URI 
+);
 
-            if (isNaN(fechaInicio) || isNaN(fechaFin)) {
-                return res.status(400).json({ error: "El formato de fecha u hora no es válido" });
-            }
+const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-            if (fechaInicio >= fechaFin) {
-                return res.status(400).json({ error: "La hora de inicio debe ser anterior a la hora de fin" });
-            }
+// Función para crear el evento
+export const crearReunion = async (req, res) => {
+    const { title, description, startDateTime, endDateTime, attendees } = req.body;
 
-            // Comprobar conflictos en las reuniones para la sala
-            const conflicto = await Reunion.findOne({
-                idsala,
-                fecha: new Date(fecha),
-                $or: [
-                    { horaInicio: { $lt: fechaFin }, horaFin: { $gt: fechaInicio } }
-                ]
-            });
+    const eventData = {
+        summary: title,
+        description: description,
+        start: {
+            dateTime: startDateTime,
+            timeZone: 'America/Bogota', // Zona horaria de Bogotá
+        },
+        end: {
+            dateTime: endDateTime,
+            timeZone: 'America/Bogota',
+        },
+        attendees: attendees.map(email => ({ email })), // Lista dinámica de asistentes
+    };
 
-            if (conflicto) {
-                return res.status(400).json({ error: "Ya existe una reunión en este horario para esta sala" });
-            }
-
-            const reunion = new Reunion({
-                idusuario,
-                idsala,
-                fecha: new Date(fecha),
-                horaInicio: fechaInicio,
-                horaFin: fechaFin,
-                estado,
-            });
-
-            await reunion.save();
-            res.json({ message: "Reunión creada satisfactoriamente", reunion });
-        } catch (error) {
-            res.status(500).json({ error: "Error al crear la reunión" });
-        }
-    },
-    putReuniones: async (req, res) => {
-        const { id } = req.params;
-        const { ...resto } = req.body;
-        const reunion = await Reunion.findByIdAndUpdate(id, resto, { new: true });
-        res.json(reunion);
-    },
-    putReunionesActivar: async (req, res) => {
-        const { id } = req.params;
-        const reunion = await Reunion.findByIdAndUpdate(id, { estado: 1 }, { new: true });
-        res.json({ reunion });
-    },
-    putReunionesDesactivar: async (req, res) => {
-        const { id } = req.params;
-        const reunion = await Reunion.findByIdAndUpdate(id, { estado: 0 }, { new: true });
-        res.json({ reunion });
-    },
-    deleteReuniones: async (req, res) => {
-        const { id } = req.params;
-        try {
-            const reunion = await Reunion.findByIdAndDelete(id);
-            if (!reunion) {
-                return res.status(404).json({ error: "Reunión no encontrada" });
-            }
-            res.json({ message: "Reunión eliminada correctamente", reunion });
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: "Error al eliminar la reunión" });
-        }
+    try {
+        const response = await calendar.events.insert({
+            calendarId: 'primary', // Crear en el calendario principal
+            resource: eventData,
+        });
+        res.status(200).send({ event: response.data });
+    } catch (error) {
+        console.error('Error creando evento:', error);
+        res.status(500).send({ error: 'Error al crear el evento en Google Calendar' });
     }
 };
 
-export default httpReuniones;
+// Función para obtener la URL de autorización
+export const obtenerAuthUrl = (req, res) => {
+    const authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: ['https://www.googleapis.com/auth/calendar'],
+    });
+    res.send({ authUrl });
+};
+
+// Función para obtener el token de acceso
+export const obtenerToken = async (req, res) => {
+    try {
+        const { code } = req.body;
+        const { tokens } = await oauth2Client.getToken(code);
+        oauth2Client.setCredentials(tokens);
+        res.send({ tokens });
+    } catch (error) {
+        res.status(500).send({ error: 'Error al obtener el token de acceso' });
+    }
+};
