@@ -5,7 +5,7 @@ const usuarioSchema=new mongoose.Schema({
     correo:{type:String,required:true},
     contrasena:{type:String,required:true},
     telefono:{type:String,required:true},
-    idrol:{type:mongoose.Schema.Types.ObjectId,required:true,ref:"Rol"},
+    rol:{type:String,required:true},
     estado:{type:Number,default:1},
 })
 

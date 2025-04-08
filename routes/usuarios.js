@@ -25,19 +25,15 @@ router.get("/obt/inactivos",[
 
 
 router.post("/agregar", [
-//   validarJWT,
-//   validarRol(["ADMINISTRADOR"]),
   check("nombre", "El nombre es requerido").notEmpty(),
   check("correo", "El correo es requerido").notEmpty(),
   check("contrasena", "El contrasena es requerido").notEmpty(),
   check("telefono", "El telefono es requerido").notEmpty(),
-  check("idrol", "ID de rol invalido").isMongoId(),
+  check("rol", "rol invalido").notEmpty(),
   validarCampos,
 ], httpUsuarios.postUsuarios);
 
 router.put("/actualizar/:id", [
-  // validarJWT,
-  // validarRol(["ADMINISTRADOR","RECEPCIONISTA"]),
   check("nombre", "El nombre es requerido").optional().notEmpty(),
   validarCampos,
 ], httpUsuarios.putUsuarios);

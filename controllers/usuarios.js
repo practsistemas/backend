@@ -20,23 +20,11 @@ const httpUsuarios = {
         const usuarios = await Usuario.find({estado: 0})
         res.json({ usuarios })
     },
-    // postUsuarios: async (req, res) => {
-    //     try {
-    //         const {nombre,correo,contrasena,telefono,idrol}=req.body;
-    //         const usuario = new Usuario({nombre,correo,contrasena,telefono,idrol});
-    //         await usuario.save()
-    //         console.log(usuario);
-    //         res.json({ message: "Usuario creado satisfactoriamente", usuario });
-    //     } catch (error) {
-    //         console.log(error);
-    //         res.status(400).json({ err: "No se pudo crear el Usuario" })
-    //     }
-    // },
     postUsuarios: async (req, res) => {
         try {
-            const {nombre,correo,contrasena,telefono,idrol} = req.body
+            const {nombre,correo,contrasena,telefono,rol} = req.body
             const salt = bcryptjs.genSaltSync(10);
-            const usuario = new Usuario({nombre,correo,contrasena,telefono,idrol});
+            const usuario = new Usuario({nombre,correo,contrasena,telefono,rol});
             usuario.contrasena = bcryptjs.hashSync(contrasena, salt)
             await usuario.save()
             console.log(usuario);
