@@ -6,8 +6,6 @@ import cors from "cors";
 
 // Rutas importadas
 import salas from "./routes/salas.js";
-import roles from "./routes/roles.js";
-import usuarios from "./routes/usuarios.js";
 
 const app = express();
 app.use(express.json());
@@ -16,8 +14,7 @@ app.use(cors());
 
 // Rutas de la API
 app.use("/api/salas", salas);
-app.use("/api/roles", roles);
-app.use("/api/usuarios", usuarios);
+
 
 
 
